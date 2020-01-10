@@ -17,11 +17,12 @@ var stateGetCmd = &cobra.Command{
 	Use:   "get",
 	Short: "Get state of dynomite",
 	Run: func(cmd *cobra.Command, args []string) {
-		state, err := dynomite.GetState(dynomiteHost, dynomitePort)
+		dyno := dynomite.NewDynomite(dynomiteHost, dynomitePort)
+		state, err := dyno.GetState()
 		if err != nil {
 			logg.Fatal(err.Error())
 		}
-		fmt.Printf("Dynomite [%s] State: %v\n", dynomiteHost, state)
+		fmt.Printf("Dynomite [%s] State: %v\n", dyno.Host, state)
 	},
 }
 
@@ -33,11 +34,12 @@ var stateSetCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		var state dynomite.State
 		state = dynomite.State(args[0])
-		result, err := dynomite.SetState(dynomiteHost, dynomitePort, state)
+		dyno := dynomite.NewDynomite(dynomiteHost, dynomitePort)
+		result, err := dyno.SetState(state)
 		if err != nil {
 			logg.Fatal(err.Error())
 		}
-		fmt.Printf("Dynomite [%s] State set to %v: %s\n", dynomiteHost, state, result)
+		fmt.Printf("Dynomite [%s] State set to %v: %s\n", dyno.Host, state, result)
 	},
 }
 
