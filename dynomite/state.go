@@ -24,10 +24,10 @@ var netClient = &http.Client{
 }
 
 // GetState retrieves dynomite internal state
-func GetState(host string, port int16) (State, error) {
+func (dyno Dynomite) GetState() (State, error) {
 	var state State
 
-	url := fmt.Sprintf("http://%s:%d/state/get_state", host, port)
+	url := fmt.Sprintf("http://%s:%d/state/get_state", dyno.Host, dyno.Port)
 	resp, err := netClient.Get(url)
 	if err != nil {
 		return state, err
@@ -46,14 +46,14 @@ func GetState(host string, port int16) (State, error) {
 }
 
 // SetState sets dynomites internal state
-func SetState(host string, port int16, state State) (string, error) {
+func (dyno Dynomite) SetState(state State) (string, error) {
 	var result string
 
 	err := validState(state)
 	if err != nil {
 		return result, err
 	}
-	url := fmt.Sprintf("http://%s:%d/state/%s", host, port, state)
+	url := fmt.Sprintf("http://%s:%d/state/%s", dyno.Host, dyno.Port, state)
 	// Thats seems to be strange, but setting a state is actually a GET
 	// https://github.com/Netflix/dynomite/wiki/REST#state
 	resp, err := netClient.Get(url)
