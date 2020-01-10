@@ -34,7 +34,7 @@ func GetState(host string, port int16) (State, error) {
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
-	st := fmt.Sprintf("%s", body)
+	st := string(body)
 	st = strings.TrimSuffix(st, "\n")
 
 	if strings.HasPrefix(st, "State: ") {
@@ -54,6 +54,8 @@ func SetState(host string, port int16, state State) (string, error) {
 		return result, err
 	}
 	url := fmt.Sprintf("http://%s:%d/state/%s", host, port, state)
+	// Thats seems to be strange, but setting a state is actually a GET
+	// https://github.com/Netflix/dynomite/wiki/REST#state
 	resp, err := netClient.Get(url)
 	if err != nil {
 		return result, err
