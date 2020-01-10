@@ -1,0 +1,132 @@
+package dynomite
+
+import (
+	"bufio"
+	"fmt"
+	"log"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/gomodule/redigo/redis"
+)
+
+type Backend interface {
+	Warmup(master Backend) error
+	Backup() error
+	Restore() error
+}
+
+type Redis struct {
+	Host       string
+	Port       string
+	Password   string
+	Connection redis.Conn
+}
+
+func NewRedis(host, port, password string) *Redis {
+	dialops := []redis.DialOption{
+		redis.DialConnectTimeout(time.Second),
+		redis.DialReadTimeout(time.Second),
+		redis.DialWriteTimeout(time.Second),
+	}
+
+	if password != "" {
+		dialops = append(dialops, redis.DialPassword(password))
+	}
+
+	conn, err := redis.Dial("tcp", fmt.Sprintf("%s:%s", host, port), dialops...)
+	if err != nil {
+		log.Fatal(err)
+	}
+	//TODO defer conn.Close()
+
+	return &Redis{
+		Host:       host,
+		Port:       port,
+		Connection: conn,
+	}
+}
+
+func (r Redis) Ping() bool {
+	pong, err := redis.String(r.Connection.Do("PING"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return (pong == "PONG")
+}
+
+func (r Redis) Warmup(master Redis) bool {
+	if master.Ping() {
+		result, err := redis.String(r.Connection.Do("REPLICAOF", master.Host, master.Port))
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("Setting Replica Of: %s\n", result)
+		if strings.HasPrefix(result, "OK") {
+			time.Sleep(2 * time.Second)
+			diff := r.getReplicationOffset(master)
+			if diff < 10 {
+
+			}
+			return true
+		}
+	}
+	return false
+}
+
+func (r Redis) getReplicationOffset(master Redis) int64 {
+	result1, err := redis.Values(r.Connection.Do("ROLE"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%v", result1)
+
+	result, err := redis.String(r.Connection.Do("INFO", "replication"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%v", result)
+
+	/*
+		# Replication
+		role:master
+		connected_slaves:1
+		slave0:ip=127.0.0.1,port=22122,state=online,offset=1288,lag=1
+		master_replid:af226365937302a504735a6a9a881758421680af
+		master_replid2:0000000000000000000000000000000000000000
+		master_repl_offset:1288
+		second_repl_offset:-1
+		repl_backlog_active:1
+		repl_backlog_size:1048576
+		repl_backlog_first_byte_offset:29
+		repl_backlog_histlen:1260
+	*/
+
+	scanner := bufio.NewScanner(strings.NewReader(result))
+	var masterOffset, slaveOffset int64
+	for scanner.Scan() {
+		if strings.HasPrefix(scanner.Text(), "slave") {
+			// slave0:ip=127.0.0.1,port=22122,state=online,offset=1288,lag=1
+			slave := strings.Split(scanner.Text(), ":")
+			slave = strings.Split(slave[1], ",")
+			if slave[0] == r.Host {
+				slaveOffset, err = strconv.ParseInt(slave[3], 10, 64)
+				if err != nil {
+					fmt.Println(err)
+				}
+			}
+		} else if strings.HasPrefix(scanner.Text(), "master_repl_offset") {
+			master := strings.Split(scanner.Text(), ":")
+			masterOffset, err = strconv.ParseInt(master[1], 10, 64)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+		if slaveOffset != 0 && masterOffset != 0 {
+			break
+		}
+	}
+	return masterOffset - slaveOffset
+}
