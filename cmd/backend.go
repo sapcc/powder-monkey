@@ -52,7 +52,7 @@ var roleCmd = &cobra.Command{
 			logg.Fatal(err.Error())
 		}
 
-		fmt.Printf("Dynomite backend [%s]: role %v\n", host, role)
+		fmt.Printf("Dynomite backend [%s]: role %s\n", host, role)
 	},
 }
 

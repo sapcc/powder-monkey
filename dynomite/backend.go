@@ -1,7 +1,6 @@
 package dynomite
 
 import (
-	"bufio"
 	"fmt"
 	"strconv"
 	"strings"
@@ -70,22 +69,19 @@ func (r Redis) Role() (string, error) {
 	}
 
 	var role, master, connectedSlaves string
-	scanner := bufio.NewScanner(strings.NewReader(result))
-	for scanner.Scan() {
-		line := scanner.Text()
+	for _, line := range strings.Split(result, "\r\n") {
 		if strings.HasPrefix(line, "role:") {
-			role = line[5:]
+			role = strings.TrimPrefix(line, "role:")
 		} else if strings.HasPrefix(line, "master_host:") {
-			master = line[12:]
+			master = strings.TrimPrefix(line, "master_host:")
 		} else if strings.HasPrefix(line, "connected_slaves:") {
-			connectedSlaves = line[17:]
+			connectedSlaves = strings.TrimPrefix(line, "connected_slaves:")
 		}
 	}
 
 	if role == "slave" {
 		return fmt.Sprintf("%s (Master is %s)", role, master), nil
 	}
-
 	return fmt.Sprintf("%s with %s connected slaves", role, connectedSlaves), nil
 }
 
@@ -157,10 +153,8 @@ func (r Redis) ReplicationOffset(master Redis) (int64, error) {
 		repl_backlog_histlen:1260
 	*/
 
-	scanner := bufio.NewScanner(strings.NewReader(result))
 	var masterOffset, slaveOffset int64
-	for scanner.Scan() {
-		line := scanner.Text()
+	for _, line := range strings.Split(result, "\r\n") {
 		if strings.HasPrefix(line, "slave") {
 			// slave0:ip=127.0.0.1,port=22122,state=online,offset=1288,lag=1
 
@@ -169,18 +163,18 @@ func (r Redis) ReplicationOffset(master Redis) (int64, error) {
 			// Get key values
 			kv := strings.Split(values, ",")
 
-			ip := strings.SplitN(kv[0], "=", 2)[1]
+			ip := strings.TrimPrefix(kv[0], "ip=")
 			if ip == r.Host {
-				offset := strings.SplitN(kv[3], "=", 2)[1]
+				offset := strings.TrimPrefix(kv[3], "offset=")
 				slaveOffset, err = strconv.ParseInt(offset, 10, 64)
 				if err != nil {
 					return 0, err
 				}
 				logg.Info("Slave Offset %d", slaveOffset)
 			}
-		} else if strings.HasPrefix(scanner.Text(), "master_repl_offset") {
-			master := strings.Split(scanner.Text(), ":")
-			masterOffset, err = strconv.ParseInt(master[1], 10, 64)
+		} else if strings.HasPrefix(line, "master_repl_offset") {
+			master := strings.TrimPrefix(line, "master_repl_offset:")
+			masterOffset, err = strconv.ParseInt(master, 10, 64)
 			if err != nil {
 				return 0, err
 			}
