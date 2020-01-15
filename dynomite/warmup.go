@@ -39,11 +39,13 @@ func (dyno Dynomite) Warmup(master Redis, accecptedDiff int64, timeout time.Dura
 	}
 	logg.Info("Replication setup from %s", master.Host)
 
-	tick := time.Tick(2 * time.Second)
 	timer := time.After(timeout)
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
 	for {
 		select {
-		case <-tick:
+		case <-ticker.C:
 			diff, err := dyno.Backend.ReplicationOffset(master)
 			if err != nil {
 				logg.Error("Warmup failed: %s", err.Error())
