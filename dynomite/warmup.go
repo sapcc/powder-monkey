@@ -19,23 +19,23 @@ func (dyno Dynomite) Warmup(master Redis, accecptedDiff int64, timeout time.Dura
 	// Check backend alive
 	ping, err := dyno.Backend.Ping()
 	if err != nil {
-		return false, fmt.Errorf("Warmup failed: %s", err.Error())
+		return false, fmt.Errorf("Warmup failed - Local Backend Ping: %s", err.Error())
 	}
 	if !ping {
-		return false, fmt.Errorf("Warmup failed: Backend did not ping")
+		return false, fmt.Errorf("Warmup failed - Local Backend did not Ping")
 	}
 
 	// Set State standby
 	_, err = dyno.SetState(Standby)
 	if err != nil {
-		return false, fmt.Errorf("Warmup failed: %s", err.Error())
+		return false, fmt.Errorf("Warmup failed - Set State %s: %s", Standby, err.Error())
 	}
 	logg.Info("Setting state %s", Standby)
 
 	// Backend to replicate from master
 	_, err = dyno.Backend.Replicate(master)
 	if err != nil {
-		return false, fmt.Errorf("Warmup failed: %s", err.Error())
+		return false, fmt.Errorf("Warmup failed - Initiate Replication: %s", err.Error())
 	}
 	logg.Info("Replication setup from %s", master.Host)
 
@@ -48,7 +48,7 @@ func (dyno Dynomite) Warmup(master Redis, accecptedDiff int64, timeout time.Dura
 		case <-ticker.C:
 			diff, err := dyno.Backend.ReplicationOffset(master)
 			if err != nil {
-				logg.Error("Warmup failed: %s", err.Error())
+				logg.Error("Warmup failed - Get Replication Offset: %s", err.Error())
 			}
 			logg.Info("Current replication offset diff: %d", diff)
 
@@ -57,21 +57,21 @@ func (dyno Dynomite) Warmup(master Redis, accecptedDiff int64, timeout time.Dura
 				// Set State writes_only
 				_, err = dyno.SetState(WritesOnly)
 				if err != nil {
-					return false, fmt.Errorf("Warmup failed: %s", err.Error())
+					return false, fmt.Errorf("Warmup failed - Set State %s: %s", WritesOnly, err.Error())
 				}
 				logg.Info("Setting state %s", WritesOnly)
 
 				// Stop Sync
 				err = dyno.Backend.StopReplication()
 				if err != nil {
-					return false, fmt.Errorf("Warmup failed: %s", err.Error())
+					return false, fmt.Errorf("Warmup failed - Stopping Replication: %s", err.Error())
 				}
 				logg.Info("Replication stopped")
 
 				// Set State resuming
 				_, err = dyno.SetState(Resuming)
 				if err != nil {
-					return false, fmt.Errorf("Warmup failed: %s", err.Error())
+					return false, fmt.Errorf("Warmup failed - Set State %s: %s", Resuming, err.Error())
 				}
 				logg.Info("Setting state %s", Resuming)
 
@@ -81,13 +81,13 @@ func (dyno Dynomite) Warmup(master Redis, accecptedDiff int64, timeout time.Dura
 				// Set State Normal
 				_, err = dyno.SetState(Normal)
 				if err != nil {
-					return false, fmt.Errorf("Warmup failed: %s", err.Error())
+					return false, fmt.Errorf("Warmup failed - Set State %s: %s", Normal, err.Error())
 				}
 				logg.Info("Setting state %s", Normal)
 				return true, nil
 			}
 		case <-timer:
-			return false, fmt.Errorf("Warmup timedout")
+			return false, fmt.Errorf("Warmup timed out")
 		}
 	}
 }
