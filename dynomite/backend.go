@@ -146,8 +146,8 @@ func (r Redis) StopReplication() error {
 }
 
 // ReplicationOffset determines the ReplicationOffset difference between master and slave
-func (r Redis) ReplicationOffset(master Redis) (int64, error) {
-	conn := master.connPool.Get()
+func (r Redis) ReplicationOffset(slaveHost string) (int64, error) {
+	conn := r.connPool.Get()
 	defer conn.Close()
 
 	result, err := redis.String(conn.Do("INFO", "replication"))
@@ -182,7 +182,7 @@ func (r Redis) ReplicationOffset(master Redis) (int64, error) {
 			kv := strings.Split(values, ",")
 
 			ip := strings.TrimPrefix(kv[0], "ip=")
-			if ip == r.Host {
+			if ip == slaveHost {
 				offset := strings.TrimPrefix(kv[3], "offset=")
 				slaveOffset, err = strconv.ParseInt(offset, 10, 64)
 				if err != nil {

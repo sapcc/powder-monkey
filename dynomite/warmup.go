@@ -15,7 +15,7 @@ import (
 // 5. Stop replication
 // 6. Set Dynomite State to resuming
 // 7. Set Dynomite State to normal
-func (dyno Dynomite) Warmup(master Redis, accecptedDiff int64, timeout time.Duration) (bool, error) {
+func (dyno Dynomite) Warmup(master Redis, accecptedDiff int64, timeout time.Duration, slaveHost string) (bool, error) {
 	err := dyno.Backend.WaitFor(1 * time.Minute)
 	if err != nil {
 		return false, fmt.Errorf("Warmup failed: %s", err.Error())
@@ -42,7 +42,7 @@ func (dyno Dynomite) Warmup(master Redis, accecptedDiff int64, timeout time.Dura
 	for {
 		select {
 		case <-ticker.C:
-			diff, err := dyno.Backend.ReplicationOffset(master)
+			diff, err := master.ReplicationOffset(slaveHost)
 			if err != nil {
 				logg.Error("Warmup failed - Get Replication Offset: %s", err.Error())
 			}

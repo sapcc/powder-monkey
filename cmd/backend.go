@@ -17,6 +17,7 @@ var (
 	masterBackendPort int16
 	acceptedDiff      int64
 	timeoutMinutes    int
+	replicaAnnounceIP string
 )
 
 var backendCmd = &cobra.Command{
@@ -65,8 +66,12 @@ var warmupCmd = &cobra.Command{
 		port, _ := rootCmd.PersistentFlags().GetInt16("dynomite-port")
 		dyno := dynomite.NewDynomiteRedis(host, port, backendPort, backendPassword)
 		master := dynomite.NewRedis(args[0], masterBackendPort, backendPassword)
+		slaveHost := host
+		if replicaAnnounceIP != "" {
+			slaveHost = replicaAnnounceIP
+		}
 
-		result, err := dyno.Warmup(*master, acceptedDiff, time.Duration(timeoutMinutes)*time.Minute)
+		result, err := dyno.Warmup(*master, acceptedDiff, time.Duration(timeoutMinutes)*time.Minute, slaveHost)
 		if err != nil {
 			logg.Fatal(err.Error())
 		}
@@ -84,6 +89,7 @@ func init() {
 	warmupCmd.PersistentFlags().IntVar(&timeoutMinutes, "timeout-minutes", 5, "Time in minutes until the Warmup times out")
 	warmupCmd.PersistentFlags().Int64Var(&acceptedDiff, "accepted-diff", 100, "Accepted difference for replication offset between master and replica")
 	warmupCmd.PersistentFlags().Int16Var(&masterBackendPort, "master-backend-port", 22122, "master backend port")
+	warmupCmd.PersistentFlags().StringVar(&replicaAnnounceIP, "replica-announce-ip", "", "external IP announced to the master")
 	backendCmd.AddCommand(warmupCmd)
 
 	rootCmd.AddCommand(backendCmd)
