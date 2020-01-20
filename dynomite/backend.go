@@ -204,3 +204,41 @@ func (r Redis) ReplicationOffset(slaveHost string) (int64, error) {
 	}
 	return (masterOffset - slaveOffset), nil
 }
+
+// Warmup does a simple replication from a master backend without dealing with dynomite states
+func (r Redis) Warmup(master Redis, accecptedDiff int64, timeout time.Duration, slaveHost string) (bool, error) {
+	// Backend to replicate from master
+	_, err := r.Replicate(master)
+	if err != nil {
+		return false, fmt.Errorf("Warmup failed - Initiate Replication: %s", err.Error())
+	}
+	logg.Info("Replication setup from %s", master.Host)
+
+	timer := time.After(timeout)
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			diff, err := master.ReplicationOffset(slaveHost)
+			if err != nil {
+				logg.Error("Warmup failed - Get Replication Offset: %s", err.Error())
+			}
+			logg.Info("Current replication offset diff: %d", diff)
+
+			// Accecpted Diff reached
+			if diff < accecptedDiff {
+				// Stop Sync
+				err = r.StopReplication()
+				if err != nil {
+					return false, fmt.Errorf("Warmup failed - Stopping Replication: %s", err.Error())
+				}
+				logg.Info("Replication stopped")
+				return true, nil
+			}
+		case <-timer:
+			return false, fmt.Errorf("Warmup timed out")
+		}
+	}
+}

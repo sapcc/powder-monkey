@@ -71,7 +71,7 @@ var warmupCmd = &cobra.Command{
 			slaveHost = replicaAnnounceIP
 		}
 
-		result, err := dyno.Warmup(*master, acceptedDiff, time.Duration(timeoutMinutes)*time.Minute, slaveHost)
+		result, err := dyno.Backend.Warmup(*master, acceptedDiff, time.Duration(timeoutMinutes)*time.Minute, slaveHost)
 		if err != nil {
 			logg.Fatal(err.Error())
 		}
