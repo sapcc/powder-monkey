@@ -58,6 +58,24 @@ func (r Redis) Ping() (bool, error) {
 	return (pong == "PONG"), nil
 }
 
+// WaitFor waits for a succesful Ping to the backend during the specified timeout
+func (r Redis) WaitFor(timeout time.Duration) error {
+	timer := time.After(timeout)
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			if ping, _ := r.Ping(); ping {
+				return nil
+			}
+		case <-timer:
+			return fmt.Errorf("Pinging backend %s timed out", r.Host)
+		}
+	}
+}
+
 // Role returns the current role of Redis master/slave
 func (r Redis) Role() (string, error) {
 	conn := r.connPool.Get()

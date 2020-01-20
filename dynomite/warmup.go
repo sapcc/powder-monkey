@@ -16,13 +16,9 @@ import (
 // 6. Set Dynomite State to resuming
 // 7. Set Dynomite State to normal
 func (dyno Dynomite) Warmup(master Redis, accecptedDiff int64, timeout time.Duration) (bool, error) {
-	// Check backend alive
-	ping, err := dyno.Backend.Ping()
+	err := dyno.Backend.WaitFor(1 * time.Minute)
 	if err != nil {
-		return false, fmt.Errorf("Warmup failed - Local Backend Ping: %s", err.Error())
-	}
-	if !ping {
-		return false, fmt.Errorf("Warmup failed - Local Backend did not Ping")
+		return false, fmt.Errorf("Warmup failed: %s", err.Error())
 	}
 
 	// Set State standby
