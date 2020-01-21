@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/sapcc/go-bits/logg"
 	"github.com/sapcc/powder-monkey/dynomite"
 	"github.com/spf13/cobra"
@@ -22,7 +20,7 @@ var stateGetCmd = &cobra.Command{
 		if err != nil {
 			logg.Fatal(err.Error())
 		}
-		fmt.Printf("Dynomite [%s] State: %v\n", dyno.Host, state)
+		logg.Info("Dynomite [%s] State: %v", dyno.Host, state)
 	},
 }
 
@@ -39,7 +37,7 @@ var stateSetCmd = &cobra.Command{
 		if err != nil {
 			logg.Fatal(err.Error())
 		}
-		fmt.Printf("Dynomite [%s] State set to %v: %s\n", dyno.Host, state, result)
+		logg.Info("Dynomite [%s] State set to %v: %s", dyno.Host, state, result)
 	},
 }
 

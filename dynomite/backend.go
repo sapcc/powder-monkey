@@ -70,6 +70,7 @@ func (r Redis) WaitFor(timeout time.Duration) error {
 			if ping, _ := r.Ping(); ping {
 				return nil
 			}
+			logg.Info("Backend %s did not yet succesfully ping", r.Host)
 		case <-timer:
 			return fmt.Errorf("Pinging backend %s timed out", r.Host)
 		}

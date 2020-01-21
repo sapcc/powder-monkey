@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/sapcc/go-bits/logg"
@@ -37,7 +36,7 @@ var pingCmd = &cobra.Command{
 			logg.Fatal(err.Error())
 		}
 
-		fmt.Printf("Dynomite backend [%s] ping: %v\n", host, state)
+		logg.Info("Dynomite backend [%s] ping: %v", host, state)
 	},
 }
 
@@ -53,7 +52,7 @@ var roleCmd = &cobra.Command{
 			logg.Fatal(err.Error())
 		}
 
-		fmt.Printf("Dynomite backend [%s]: role %s\n", host, role)
+		logg.Info("Dynomite backend [%s]: role %s", host, role)
 	},
 }
 
@@ -76,7 +75,7 @@ var warmupCmd = &cobra.Command{
 			logg.Fatal(err.Error())
 		}
 
-		fmt.Printf("Dynomite backend [%s] warmup from [%s] done: %v\n", host, master.Host, result)
+		logg.Info("Dynomite backend [%s] warmup from [%s] done: %v", host, master.Host, result)
 	},
 }
 

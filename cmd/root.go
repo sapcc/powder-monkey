@@ -1,8 +1,7 @@
 package cmd
 
 import (
-	"fmt"
-	"os"
+	"github.com/sapcc/go-bits/logg"
 
 	"github.com/spf13/cobra"
 )
@@ -31,7 +30,6 @@ func init() {
 // Execute executes the root command
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		logg.Fatal(err.Error())
 	}
 }
