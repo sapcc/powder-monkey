@@ -22,8 +22,7 @@ func (dyno Dynomite) Backup(containerName, prefix string) error {
 	}
 
 	objectName := prefix + "/" + currentTime.Format("2006-01-02_1504") + "/dump.rdb"
-	err = uploadDump("/Users/d044166/upload_test/upload_test_1K", containerName, objectName)
-	//err = uploadDump("/data/dump.rdb", containerName, objectName)
+	err = uploadDump("/data/dump.rdb", containerName, objectName)
 	if err != nil {
 		return err
 	}
