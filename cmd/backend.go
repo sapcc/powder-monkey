@@ -56,6 +56,22 @@ var roleCmd = &cobra.Command{
 	},
 }
 
+var sizeCmd = &cobra.Command{
+	Use:   "size",
+	Short: "Get Number of keys of dynomite backend",
+	Run: func(cmd *cobra.Command, args []string) {
+		host, _ := rootCmd.PersistentFlags().GetString("dynomite-host")
+		redis := dynomite.NewRedis(host, backendPort, backendPassword)
+
+		size, err := redis.DBSize()
+		if err != nil {
+			logg.Fatal(err.Error())
+		}
+
+		logg.Info("Dynomite backend [%s]: Number of keys %d", host, size)
+	},
+}
+
 var warmupCmd = &cobra.Command{
 	Use:   "warmup [master]",
 	Short: "Warmup dynomite backend",
@@ -84,6 +100,7 @@ func init() {
 	backendCmd.PersistentFlags().StringVar(&backendPassword, "backend-password", "", "dynomite backend password")
 	backendCmd.AddCommand(pingCmd)
 	backendCmd.AddCommand(roleCmd)
+	backendCmd.AddCommand(sizeCmd)
 
 	warmupCmd.PersistentFlags().IntVar(&timeoutMinutes, "timeout-minutes", 5, "Time in minutes until the Warmup times out")
 	warmupCmd.PersistentFlags().Int64Var(&acceptedDiff, "accepted-diff", 100, "Accepted difference for replication offset between master and replica")

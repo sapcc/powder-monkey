@@ -1,6 +1,7 @@
 package dynomite
 
 import (
+	"fmt"
 	"os"
 	"time"
 
@@ -16,7 +17,16 @@ import (
 func (dyno Dynomite) Backup(containerName, prefix string) error {
 	currentTime := time.Now()
 
-	_, err := dyno.Backend.BGSave(5 * time.Minute)
+	size, err := dyno.Backend.DBSize()
+	if err != nil {
+		return err
+	}
+
+	if size <= 0 {
+		return fmt.Errorf("Skipping this backup. No Keys in backend")
+	}
+
+	_, err = dyno.Backend.BGSave(5 * time.Minute)
 	if err != nil {
 		return err
 	}
@@ -92,7 +102,7 @@ func uploadDump(dumpFileName, containerName, objectName string) error {
 	segmentBytes := int64(1 << 30) // 1<30 bytes = 1 GiB per segment
 	object := account.Container(containerName).Object(objectName)
 
-	logg.Info("Upload dump to in %s", object.FullName())
+	logg.Info("Upload dump to %s", object.FullName())
 
 	header := schwift.NewObjectHeaders()
 	header.ExpiresAt().Set(time.Now().Add(14 * 24 * time.Hour)) // Keep backups for 2 weeks

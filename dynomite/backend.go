@@ -249,6 +249,22 @@ func (r Redis) Warmup(master Redis, accecptedDiff int64, timeout time.Duration, 
 	}
 }
 
+// DBSize retrieves the number of Keys in the Backend
+func (r Redis) DBSize() (int64, error) {
+	conn := r.connPool.Get()
+	defer conn.Close()
+
+	var size int64
+
+	size, err := redis.Int64(conn.Do("DBSIZE"))
+	if err != nil {
+		return size, err
+	}
+	logg.Debug("DBSIZE: %d", size)
+
+	return size, nil
+}
+
 // LastSave return the Time of the last save
 func (r Redis) LastSave() (time.Time, error) {
 	conn := r.connPool.Get()
