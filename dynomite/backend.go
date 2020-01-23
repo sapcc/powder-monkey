@@ -248,3 +248,84 @@ func (r Redis) Warmup(master Redis, accecptedDiff int64, timeout time.Duration, 
 		}
 	}
 }
+
+// DBSize retrieves the number of Keys in the Backend
+func (r Redis) DBSize() (int64, error) {
+	conn := r.connPool.Get()
+	defer conn.Close()
+
+	var size int64
+
+	size, err := redis.Int64(conn.Do("DBSIZE"))
+	if err != nil {
+		return size, err
+	}
+	logg.Debug("DBSIZE: %d", size)
+
+	return size, nil
+}
+
+// LastSave return the Time of the last save
+func (r Redis) LastSave() (time.Time, error) {
+	conn := r.connPool.Get()
+	defer conn.Close()
+
+	var lastSave time.Time
+
+	result, err := redis.Int64(conn.Do("LASTSAVE"))
+	if err != nil {
+		return lastSave, err
+	}
+
+	lastSave = time.Unix(result, 0)
+	logg.Debug("LASTSAVE: %v", lastSave)
+
+	return lastSave, nil
+}
+
+// BGSave triggers Background Save and watches the status
+func (r Redis) BGSave(timeout time.Duration) (time.Time, error) {
+	currentTime := time.Now()
+
+	conn := r.connPool.Get()
+	defer conn.Close()
+
+	var currentSave time.Time
+
+	// Getting Last Save Timestamp
+	lastSave, err := r.LastSave()
+	if err != nil {
+		return currentSave, err
+	}
+
+	// Trigger Background SAVE
+	result, err := redis.String(conn.Do("BGSAVE"))
+	if err != nil {
+		return currentSave, err
+	}
+	logg.Info("BGSAVE %s", result)
+
+	timer := time.After(timeout)
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			// Getting Current Save Timestamp
+			currentSave, err := r.LastSave()
+			if err != nil {
+				logg.Error(err.Error())
+				break
+			}
+
+			// LastSave was updated --> BGSave finished
+			if currentSave.After(lastSave) {
+				logg.Info("BGSAVE finished in %s", time.Now().Sub(currentTime))
+				return currentSave, nil
+			}
+		case <-timer:
+			return currentSave, fmt.Errorf("BGSAVE timed out")
+		}
+	}
+}
