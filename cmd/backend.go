@@ -28,15 +28,14 @@ var pingCmd = &cobra.Command{
 	Use:   "ping",
 	Short: "Ping dynomite backend",
 	Run: func(cmd *cobra.Command, args []string) {
-		host, _ := rootCmd.PersistentFlags().GetString("dynomite-host")
-		redis := dynomite.NewRedis(host, backendPort, backendPassword)
+		redis := dynomite.NewRedis(dynomiteHost, backendPort, backendPassword)
 
 		state, err := redis.Ping()
 		if err != nil {
 			logg.Fatal(err.Error())
 		}
 
-		logg.Info("Dynomite backend [%s] ping: %v", host, state)
+		logg.Info("Dynomite backend [%s] ping: %v", dynomiteHost, state)
 	},
 }
 
@@ -44,15 +43,14 @@ var roleCmd = &cobra.Command{
 	Use:   "role",
 	Short: "Get Role of dynomite backend",
 	Run: func(cmd *cobra.Command, args []string) {
-		host, _ := rootCmd.PersistentFlags().GetString("dynomite-host")
-		redis := dynomite.NewRedis(host, backendPort, backendPassword)
+		redis := dynomite.NewRedis(dynomiteHost, backendPort, backendPassword)
 
 		role, err := redis.Role()
 		if err != nil {
 			logg.Fatal(err.Error())
 		}
 
-		logg.Info("Dynomite backend [%s]: role %s", host, role)
+		logg.Info("Dynomite backend [%s]: role %s", dynomiteHost, role)
 	},
 }
 
@@ -60,15 +58,14 @@ var sizeCmd = &cobra.Command{
 	Use:   "size",
 	Short: "Get Number of keys of dynomite backend",
 	Run: func(cmd *cobra.Command, args []string) {
-		host, _ := rootCmd.PersistentFlags().GetString("dynomite-host")
-		redis := dynomite.NewRedis(host, backendPort, backendPassword)
+		redis := dynomite.NewRedis(dynomiteHost, backendPort, backendPassword)
 
 		size, err := redis.DBSize()
 		if err != nil {
 			logg.Fatal(err.Error())
 		}
 
-		logg.Info("Dynomite backend [%s]: Number of keys %d", host, size)
+		logg.Info("Dynomite backend [%s]: Number of keys %d", dynomiteHost, size)
 	},
 }
 
@@ -77,11 +74,9 @@ var warmupCmd = &cobra.Command{
 	Short: "Warmup dynomite backend",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		host, _ := rootCmd.PersistentFlags().GetString("dynomite-host")
-		port, _ := rootCmd.PersistentFlags().GetInt16("dynomite-port")
-		dyno := dynomite.NewDynomiteRedis(host, port, backendPort, backendPassword)
+		dyno := dynomite.NewDynomiteRedis(dynomiteHost, dynomitePort, backendPort, backendPassword)
 		master := dynomite.NewRedis(args[0], masterBackendPort, backendPassword)
-		slaveHost := host
+		slaveHost := dynomiteHost
 		if replicaAnnounceIP != "" {
 			slaveHost = replicaAnnounceIP
 		}
@@ -91,7 +86,7 @@ var warmupCmd = &cobra.Command{
 			logg.Fatal(err.Error())
 		}
 
-		logg.Info("Dynomite backend [%s] warmup from [%s] done: %v", host, master.Host, result)
+		logg.Info("Dynomite backend [%s] warmup from [%s] done: %v", dynomiteHost, master.Host, result)
 	},
 }
 

@@ -19,9 +19,7 @@ var backupCmd = &cobra.Command{
 	Short: "Trigger dynomite backend backup and upload to dump file with the specified prefix",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		host, _ := rootCmd.PersistentFlags().GetString("dynomite-host")
-		port, _ := rootCmd.PersistentFlags().GetInt16("dynomite-port")
-		dyno := dynomite.NewDynomiteRedis(host, port, backendPort, backendPassword)
+		dyno := dynomite.NewDynomiteRedis(dynomiteHost, dynomitePort, backendPort, backendPassword)
 
 		if every != 0 {
 			err := dyno.BackupEvery(every, container, args[0])
