@@ -5,11 +5,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/gophercloud/gophercloud"
-	"github.com/gophercloud/gophercloud/openstack"
-	"github.com/gophercloud/utils/openstack/clientconfig"
 	"github.com/majewsky/schwift"
-	"github.com/majewsky/schwift/gopherschwift"
 	"github.com/sapcc/go-bits/logg"
 )
 
@@ -64,20 +60,7 @@ func (dyno Dynomite) BackupEvery(every time.Duration, containerName, prefix stri
 func uploadDump(dumpFileName, containerName, objectName string) error {
 	currentTime := time.Now()
 
-	ao, err := clientconfig.AuthOptions(nil)
-	if err != nil {
-		return err
-	}
-	provider, err := openstack.NewClient(ao.IdentityEndpoint)
-	if err != nil {
-		return err
-	}
-	err = openstack.Authenticate(provider, *ao)
-	client, err := openstack.NewObjectStorageV1(provider, gophercloud.EndpointOpts{})
-	if err != nil {
-		return err
-	}
-	account, err := gopherschwift.Wrap(client, nil)
+	account, err := newObjectStoreAccount()
 	if err != nil {
 		return err
 	}
