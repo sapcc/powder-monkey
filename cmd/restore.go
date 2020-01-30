@@ -26,7 +26,7 @@ var listBackups = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		err := dynomite.ListBackups(container, args[0], 25)
 		if err != nil {
-			logg.Fatal(err.Error())
+			logg.Error(err.Error())
 		}
 	},
 }

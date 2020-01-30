@@ -2,8 +2,9 @@ package dynomite
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/url"
+	"os"
 	"time"
 
 	"github.com/majewsky/schwift"
@@ -30,9 +31,20 @@ func Restore(containerName, prefix string) error {
 	}
 
 	logg.Info("Downloading %s", objects[0].FullName())
-	data, err := objects[0].Download(nil).AsByteSlice()
 
-	err = ioutil.WriteFile("/data/dump.rdb", data, 0644)
+	data, err := objects[0].Download(nil).AsReadCloser()
+	if err != nil {
+		return err
+	}
+	defer data.Close()
+
+	file, err := os.Create("/data/dump.rdb")
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	_, err = io.Copy(file, data)
 	if err != nil {
 		return err
 	}
