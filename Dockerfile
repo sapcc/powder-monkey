@@ -8,6 +8,7 @@ RUN make -C /src
 
 FROM alpine:3.10
 RUN apk add --no-cache ca-certificates curl
+LABEL source_repository="https://github.com/sapcc/powder-monkey"
 
 COPY --from=builder /src/bin/linux/amd64/powder-monkey /usr/bin/powder-monkey
 ENTRYPOINT ["/usr/bin/powder-monkey"]
