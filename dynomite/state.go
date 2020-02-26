@@ -32,9 +32,12 @@ func (dyno Dynomite) GetState() (State, error) {
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
 	st := string(body)
 	st = strings.TrimSuffix(st, "\n")
-
 	if strings.HasPrefix(st, "State: ") {
 		st = strings.ReplaceAll(st, "State: ", "")
 	}
