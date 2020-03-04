@@ -14,9 +14,9 @@ type State string
 // Possible states of dynomite
 const (
 	Normal     State = "normal"
-	Standby          = "standby"
-	WritesOnly       = "writes_only"
-	Resuming         = "resuming"
+	Standby    State = "standby"
+	WritesOnly State = "writes_only"
+	Resuming   State = "resuming"
 )
 
 var netClient = &http.Client{
@@ -25,49 +25,47 @@ var netClient = &http.Client{
 
 // GetState retrieves dynomite internal state
 func (dyno Dynomite) GetState() (State, error) {
-	var state State
-
 	url := fmt.Sprintf("http://%s:%d/state/get_state", dyno.Host, dyno.Port)
 	resp, err := netClient.Get(url)
 	if err != nil {
-		return state, err
+		return "", err
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
 	st := string(body)
 	st = strings.TrimSuffix(st, "\n")
-
 	if strings.HasPrefix(st, "State: ") {
-		st = strings.ToLower((strings.ReplaceAll(st, "State: ", "")))
+		st = strings.ReplaceAll(st, "State: ", "")
 	}
-	state = State(st)
-	err = validState(state)
-	return state, err
+
+	return StrToState(st)
 }
 
-// SetState sets dynomites internal state
+// SetState sets Dynomite's internal state and returns the response status,
+// if successful.
 func (dyno Dynomite) SetState(state State) (string, error) {
-	var result string
-
-	err := validState(state)
-	if err != nil {
-		return result, err
-	}
 	url := fmt.Sprintf("http://%s:%d/state/%s", dyno.Host, dyno.Port, state)
 	// Thats seems to be strange, but setting a state is actually a GET
 	// https://github.com/Netflix/dynomite/wiki/REST#state
 	resp, err := netClient.Get(url)
 	if err != nil {
-		return result, err
+		return "", err
 	}
 
 	return resp.Status, nil
 }
 
-func validState(state State) error {
-	switch state {
+// StrToState validates and converts a string to a State.
+func StrToState(str string) (State, error) {
+	given := State(strings.ToLower(str))
+	switch given {
 	case Normal, Standby, WritesOnly, Resuming:
-		return nil
+		return given, nil
+	default:
+		return "", fmt.Errorf("Invalid state: %s", str)
 	}
-	return fmt.Errorf("Invalid State '%s'", state)
 }

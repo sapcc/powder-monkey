@@ -30,8 +30,10 @@ var stateSetCmd = &cobra.Command{
 	Args:      cobra.ExactValidArgs(1),
 	ValidArgs: []string{"normal", "standby", "writes_only", "resuming"},
 	Run: func(cmd *cobra.Command, args []string) {
-		var state dynomite.State
-		state = dynomite.State(args[0])
+		state, err := dynomite.StrToState(args[0])
+		if err != nil {
+			logg.Fatal(err.Error())
+		}
 		dyno := dynomite.NewDynomite(dynomiteHost, dynomitePort)
 		result, err := dyno.SetState(state)
 		if err != nil {
