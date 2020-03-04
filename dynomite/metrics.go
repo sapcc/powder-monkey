@@ -136,10 +136,10 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		dc = ir.DC
 
 		ch <- c.uptime.mustNewConstMetric(float64(ir.Uptime), rack, dc, ip)
-		ch <- c.clientConnections.mustNewConstMetric(float64(ir.DynomiteRack.ClientConnections), rack, dc, ip)
-		ch <- c.clientReadRequests.mustNewConstMetric(float64(ir.DynomiteRack.ClientReadRequests), rack, dc, ip)
-		ch <- c.clientWriteRequests.mustNewConstMetric(float64(ir.DynomiteRack.ClientWriteRequests), rack, dc, ip)
-		ch <- c.clientDroppedRequests.mustNewConstMetric(float64(ir.DynomiteRack.ClientDroppedRequests), rack, dc, ip)
+		ch <- c.clientConnections.mustNewConstMetric(float64(ir.Pool.ClientConnections), rack, dc, ip)
+		ch <- c.clientReadRequests.mustNewConstMetric(float64(ir.Pool.ClientReadRequests), rack, dc, ip)
+		ch <- c.clientWriteRequests.mustNewConstMetric(float64(ir.Pool.ClientWriteRequests), rack, dc, ip)
+		ch <- c.clientDroppedRequests.mustNewConstMetric(float64(ir.Pool.ClientDroppedRequests), rack, dc, ip)
 	}
 
 	stateVal := 1 // until proven otherwise
