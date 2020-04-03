@@ -61,49 +61,49 @@ func NewCollector(dyno *Dynomite) *Collector {
 			desc: prometheus.NewDesc(
 				"dynomite_state",
 				"State as reported by Dynomite.",
-				[]string{"state", "rack", "dc", "ip_address"}, nil),
+				[]string{"state", "rack", "dc", "token", "ip_address"}, nil),
 			valueType: prometheus.GaugeValue,
 		},
 		dbSize: typedDesc{
 			desc: prometheus.NewDesc(
 				"dynomite_db_size",
 				"Key database size as reported by the Redis backend.",
-				[]string{"rack", "dc", "ip_address"}, nil),
+				[]string{"rack", "dc", "token", "ip_address"}, nil),
 			valueType: prometheus.GaugeValue,
 		},
 		uptime: typedDesc{
 			desc: prometheus.NewDesc(
 				"dynomite_uptime",
 				"Uptime as reported by Dynomite info.",
-				[]string{"rack", "dc", "ip_address"}, nil),
+				[]string{"rack", "dc", "token", "ip_address"}, nil),
 			valueType: prometheus.GaugeValue,
 		},
 		clientConnections: typedDesc{
 			desc: prometheus.NewDesc(
 				"dynomite_client_connections",
 				"Client connections as reported by Dynomite info.",
-				[]string{"rack", "dc", "ip_address"}, nil),
+				[]string{"rack", "dc", "token", "ip_address"}, nil),
 			valueType: prometheus.GaugeValue,
 		},
 		clientReadRequests: typedDesc{
 			desc: prometheus.NewDesc(
 				"dynomite_client_read_requests",
 				"Client read requests as reported by Dynomite info.",
-				[]string{"rack", "dc", "ip_address"}, nil),
+				[]string{"rack", "dc", "token", "ip_address"}, nil),
 			valueType: prometheus.GaugeValue,
 		},
 		clientWriteRequests: typedDesc{
 			desc: prometheus.NewDesc(
 				"dynomite_client_write_requests",
 				"Client write requests as reported by Dynomite info.",
-				[]string{"rack", "dc", "ip_address"}, nil),
+				[]string{"rack", "dc", "token", "ip_address"}, nil),
 			valueType: prometheus.GaugeValue,
 		},
 		clientDroppedRequests: typedDesc{
 			desc: prometheus.NewDesc(
 				"dynomite_client_dropped_requests",
 				"Client dropped requests as reported by Dynomite info.",
-				[]string{"rack", "dc", "ip_address"}, nil),
+				[]string{"rack", "dc", "token", "ip_address"}, nil),
 			valueType: prometheus.GaugeValue,
 		},
 	}
@@ -127,6 +127,11 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		logg.Error("could not get ip address from env variable: DYNO_INSTANCE")
 	}
 
+	token := os.Getenv("DYNO_TOKEN")
+	if token == "" {
+		logg.Error("could not get token from env variable: DYNO_TOKEN")
+	}
+
 	var rack, dc string
 	ir, err := c.dyno.Info()
 	if err != nil {
@@ -135,29 +140,33 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		rack = ir.Rack
 		dc = ir.DC
 
-		ch <- c.uptime.mustNewConstMetric(float64(ir.Uptime), rack, dc, ip)
-		ch <- c.clientConnections.mustNewConstMetric(float64(ir.Pool.ClientConnections), rack, dc, ip)
-		ch <- c.clientReadRequests.mustNewConstMetric(float64(ir.Pool.ClientReadRequests), rack, dc, ip)
-		ch <- c.clientWriteRequests.mustNewConstMetric(float64(ir.Pool.ClientWriteRequests), rack, dc, ip)
-		ch <- c.clientDroppedRequests.mustNewConstMetric(float64(ir.Pool.ClientDroppedRequests), rack, dc, ip)
+		ch <- c.uptime.mustNewConstMetric(float64(ir.Uptime), rack, dc, token, ip)
+		ch <- c.clientConnections.mustNewConstMetric(float64(ir.Pool.ClientConnections), rack, dc, token, ip)
+		ch <- c.clientReadRequests.mustNewConstMetric(float64(ir.Pool.ClientReadRequests), rack, dc, token, ip)
+		ch <- c.clientWriteRequests.mustNewConstMetric(float64(ir.Pool.ClientWriteRequests), rack, dc, token, ip)
+		ch <- c.clientDroppedRequests.mustNewConstMetric(float64(ir.Pool.ClientDroppedRequests), rack, dc, token, ip)
 	}
 
-	stateVal := 1 // until proven otherwise
+	stateVal := 1         // until proven otherwise
+	stateStr := "unknown" // always have a value for the state label
+
 	state, err := c.dyno.GetState()
 	if err != nil {
 		stateVal = 0
 		logg.Error(err.Error())
+	} else {
+		stateStr = string(state)
 	}
 
 	if state != Normal {
 		stateVal = 0
 	}
-	ch <- c.state.mustNewConstMetric(float64(stateVal), string(state), rack, dc, ip)
+	ch <- c.state.mustNewConstMetric(float64(stateVal), stateStr, rack, dc, token, ip)
 
 	size, err := c.dyno.Backend.DBSize()
 	if err != nil {
 		logg.Error(err.Error())
 	} else {
-		ch <- c.dbSize.mustNewConstMetric(float64(size), rack, dc, ip)
+		ch <- c.dbSize.mustNewConstMetric(float64(size), rack, dc, token, ip)
 	}
 }
