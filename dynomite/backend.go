@@ -178,7 +178,8 @@ func (r Redis) ReplicationOffsets(slaveHost string) (*ReplicationOffsets, error)
 		repl_backlog_histlen:1260
 	*/
 
-	var replOffsets *ReplicationOffsets
+	replOffsets := &ReplicationOffsets{}
+
 	for _, line := range strings.Split(result, "\r\n") {
 		if strings.HasPrefix(line, "slave") {
 			// slave0:ip=127.0.0.1,port=22122,state=online,offset=1288,lag=1
