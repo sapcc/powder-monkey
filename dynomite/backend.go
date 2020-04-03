@@ -45,6 +45,12 @@ func NewRedis(host string, port int16, password string) *Redis {
 	}
 }
 
+// ReplicationOffsets represents the current state of replication of master and slave
+type ReplicationOffsets struct {
+	Master int64
+	Slave  int64
+}
+
 // Ping checks liveness od Redis
 func (r Redis) Ping() (bool, error) {
 	conn := r.connPool.Get()
@@ -146,14 +152,14 @@ func (r Redis) StopReplication() error {
 	return fmt.Errorf("Replication could not be stopped: %s", result)
 }
 
-// ReplicationOffset determines the ReplicationOffset difference between master and slave
-func (r Redis) ReplicationOffset(slaveHost string) (int64, error) {
+// ReplicationOffsets determines the ReplicationOffset difference between master and slave
+func (r Redis) ReplicationOffsets(slaveHost string) (*ReplicationOffsets, error) {
 	conn := r.connPool.Get()
 	defer conn.Close()
 
 	result, err := redis.String(conn.Do("INFO", "replication"))
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 	logg.Debug("%v", result)
 
@@ -172,7 +178,7 @@ func (r Redis) ReplicationOffset(slaveHost string) (int64, error) {
 		repl_backlog_histlen:1260
 	*/
 
-	var masterOffset, slaveOffset int64
+	var replOffsets *ReplicationOffsets
 	for _, line := range strings.Split(result, "\r\n") {
 		if strings.HasPrefix(line, "slave") {
 			// slave0:ip=127.0.0.1,port=22122,state=online,offset=1288,lag=1
@@ -185,25 +191,27 @@ func (r Redis) ReplicationOffset(slaveHost string) (int64, error) {
 			ip := strings.TrimPrefix(kv[0], "ip=")
 			if ip == slaveHost {
 				offset := strings.TrimPrefix(kv[3], "offset=")
-				slaveOffset, err = strconv.ParseInt(offset, 10, 64)
+				replOffsets.Slave, err = strconv.ParseInt(offset, 10, 64)
 				if err != nil {
-					return 0, err
+					return nil, err
 				}
-				logg.Info("Slave Offset %d", slaveOffset)
+				logg.Info("Slave Offset %d", replOffsets.Slave)
 			}
 		} else if strings.HasPrefix(line, "master_repl_offset") {
 			master := strings.TrimPrefix(line, "master_repl_offset:")
-			masterOffset, err = strconv.ParseInt(master, 10, 64)
+			replOffsets.Master, err = strconv.ParseInt(master, 10, 64)
 			if err != nil {
-				return 0, err
+				return nil, err
 			}
-			logg.Info("Master Offset %d", masterOffset)
+			logg.Info("Master Offset %d", replOffsets.Master)
 		}
-		if slaveOffset != 0 && masterOffset != 0 {
+		if replOffsets.Master != 0 && replOffsets.Slave != 0 {
+			// Parsed everything
 			break
 		}
 	}
-	return (masterOffset - slaveOffset), nil
+
+	return replOffsets, nil
 }
 
 // Warmup does a simple replication from a master backend without dealing with dynomite states
@@ -227,21 +235,27 @@ func (r Redis) Warmup(master Redis, accecptedDiff int64, timeout time.Duration, 
 	for {
 		select {
 		case <-ticker.C:
-			diff, err := master.ReplicationOffset(slaveHost)
+			replOffsets, err := master.ReplicationOffsets(slaveHost)
 			if err != nil {
 				logg.Error("Warmup failed - Get Replication Offset: %s", err.Error())
 			}
-			logg.Info("Current replication offset diff: %d", diff)
 
-			// Accecpted Diff reached
-			if diff < accecptedDiff {
-				// Stop Sync
-				err = r.StopReplication()
-				if err != nil {
-					return false, fmt.Errorf("Warmup failed - Stopping Replication: %s", err.Error())
+			if replOffsets.Master > 0 && replOffsets.Slave > 0 {
+				diff := replOffsets.Master - replOffsets.Slave
+				logg.Info("Current replication offset diff: %d", diff)
+
+				// Accecpted Diff reached
+				if diff < accecptedDiff {
+					// Stop Sync
+					err = r.StopReplication()
+					if err != nil {
+						return false, fmt.Errorf("Warmup failed - Stopping Replication: %s", err.Error())
+					}
+					logg.Info("Replication stopped")
+					return true, nil
 				}
-				logg.Info("Replication stopped")
-				return true, nil
+			} else {
+				logg.Info("Replication not yet progessed. Waiting")
 			}
 		case <-timer:
 			return false, fmt.Errorf("Warmup timed out")
