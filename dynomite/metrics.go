@@ -147,17 +147,21 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		ch <- c.clientDroppedRequests.mustNewConstMetric(float64(ir.Pool.ClientDroppedRequests), rack, dc, token, ip)
 	}
 
-	stateVal := 1 // until proven otherwise
+	stateVal := 1         // until proven otherwise
+	stateStr := "unknown" // always have a value for the state label
+
 	state, err := c.dyno.GetState()
 	if err != nil {
 		stateVal = 0
 		logg.Error(err.Error())
+	} else {
+		stateStr = string(state)
 	}
 
 	if state != Normal {
 		stateVal = 0
 	}
-	ch <- c.state.mustNewConstMetric(float64(stateVal), string(state), rack, dc, token, ip)
+	ch <- c.state.mustNewConstMetric(float64(stateVal), stateStr, rack, dc, token, ip)
 
 	size, err := c.dyno.Backend.DBSize()
 	if err != nil {
