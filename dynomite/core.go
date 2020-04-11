@@ -35,24 +35,25 @@ func NewDynomiteRedis(host string, port, backendPort int16, password string) *Dy
 }
 
 func newObjectStoreAccount() (*schwift.Account, error) {
-	var account *schwift.Account
-
 	ao, err := clientconfig.AuthOptions(nil)
 	if err != nil {
-		return account, err
+		return nil, err
 	}
 	provider, err := openstack.NewClient(ao.IdentityEndpoint)
 	if err != nil {
-		return account, err
+		return nil, err
 	}
 	err = openstack.Authenticate(provider, *ao)
+	if err != nil {
+		return nil, err
+	}
 	client, err := openstack.NewObjectStorageV1(provider, gophercloud.EndpointOpts{})
 	if err != nil {
-		return account, err
+		return nil, err
 	}
-	account, err = gopherschwift.Wrap(client, nil)
+	account, err := gopherschwift.Wrap(client, nil)
 	if err != nil {
-		return account, err
+		return nil, err
 	}
 
 	return account, nil
