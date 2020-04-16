@@ -82,11 +82,9 @@ func ListBackups(containerName, prefix string, limit int) error {
 }
 
 func newIterator(containerName, prefix string) (*schwift.ObjectIterator, error) {
-	var iter *schwift.ObjectIterator
-
 	account, err := newObjectStoreAccount()
 	if err != nil {
-		return iter, err
+		return nil, err
 	}
 
 	// Use reverse listing, means the newest backup
@@ -97,7 +95,7 @@ func newIterator(containerName, prefix string) (*schwift.ObjectIterator, error) 
 	}
 
 	container := account.Container(containerName)
-	iter = container.Objects()
+	iter := container.Objects()
 	iter.Prefix = prefix
 	iter.Options = opts
 
