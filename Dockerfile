@@ -1,4 +1,4 @@
-FROM golang:1.13-alpine AS builder
+FROM golang:1.15-alpine AS builder
 RUN apk add --no-cache make gcc
 
 COPY . /src
@@ -6,7 +6,7 @@ RUN make -C /src
 
 ################################################################################
 
-FROM alpine:3.10
+FROM alpine:3.12
 RUN apk add --no-cache ca-certificates curl
 LABEL source_repository="https://github.com/sapcc/powder-monkey"
 
